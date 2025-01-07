@@ -40,6 +40,8 @@ program
       )
     );
     console.log(chalk.green('A CLI tool for managing environment variables.'));
+    // center align the version
+    console.log(chalk.yellow('Version: 1.0.0'));
   });
 
 // Command to list environment variables
