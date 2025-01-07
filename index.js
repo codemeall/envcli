@@ -9,6 +9,7 @@ import fs from 'fs';
 import { execSync } from 'child_process';
 import { Config } from './lib/config.js';
 import { requireLogin, validateCredentials } from './lib/auth.js';
+import inquirer from 'inquirer';
 
 
 // Define __dirname in ES Module
@@ -74,14 +75,43 @@ program
 program
 .command('login')
 .description('Login to EnvCLI')
-.argument('<username>', 'Username for login')
-.argument('<key>', 'Login key')
-.action((username, key) => {
-  if (validateCredentials(username, key)) {
-    config.login(username);
-    console.log(chalk.green('✨ Successfully logged in!'));
-  } else {
-    console.log(chalk.red('❌ Invalid credentials'));
+.action(async () => {
+  try {
+    const answers = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'username',
+        message: 'Enter your username:',
+        validate: (input) => {
+          if (!input) {
+            return 'Username cannot be empty';
+          }
+          return true;
+        }
+      },
+      {
+        type: 'password',
+        name: 'key',
+        message: 'Enter your login key:',
+        mask: '*',
+        validate: (input) => {
+          if (!input) {
+            return 'Login key cannot be empty';
+          }
+          return true;
+        }
+      }
+    ]);
+
+    if (validateCredentials(answers.username, answers.key)) {
+      config.login(answers.username);
+      console.log(chalk.green('✨ Successfully logged in!'));
+    } else {
+      console.log(chalk.red('❌ Invalid credentials'));
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error(chalk.red('Error during login:'), error.message);
     process.exit(1);
   }
 });
