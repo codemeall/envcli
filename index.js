@@ -6,6 +6,7 @@ import figlet from 'figlet';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
+import { execSync } from 'child_process';
 
 // Define __dirname in ES Module
 const __filename = fileURLToPath(import.meta.url);
@@ -13,6 +14,26 @@ const __dirname = path.dirname(__filename);
 
 // Initialize Commander
 const program = new Command();
+
+// Read package.json for version
+const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+
+// Set version
+program.version(packageJson.version, '-v, --version', 'Display version number');
+
+// Command to display version with more details
+program
+  .command('version')
+  .description('Display detailed version information')
+  .action(() => {
+    console.log(chalk.blue(
+      figlet.textSync('EnvCLI', { horizontalLayout: 'full' })
+    ));
+    console.log(chalk.green(`Version: ${packageJson.version}`));
+    console.log(chalk.yellow('Author:', packageJson.author || 'Not specified'));
+    console.log(chalk.yellow('License:', packageJson.license));
+    console.log(chalk.yellow('Node version:', process.version));
+  });
 
 // Utility function to parse the value based on type
 function parseValue(value, type) {
@@ -100,6 +121,33 @@ program
       }
     } else {
       console.log(chalk.red('No .env.json file found!'));
+    }
+  });
+
+// Command to check for updates
+program
+  .command('update')
+  .description('Check for and install updates')
+  .action(() => {
+    try {
+      console.log(chalk.yellow('Checking for updates...'));
+      
+      // Run brew update
+      execSync('brew update', { stdio: 'inherit' });
+      
+      // Check if update is available
+      const outdated = execSync('brew outdated envcli').toString();
+      
+      if (outdated.includes('envcli')) {
+        console.log(chalk.yellow('Update available! Installing...'));
+        execSync('brew upgrade envcli', { stdio: 'inherit' });
+        console.log(chalk.green('✨ Successfully updated envcli!'));
+      } else {
+        console.log(chalk.green('✨ You are already using the latest version!'));
+      }
+    } catch (error) {
+      console.error(chalk.red('Error checking for updates:'), error.message);
+      process.exit(1);
     }
   });
 
