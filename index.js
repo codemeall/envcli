@@ -7,10 +7,14 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
 import { execSync } from 'child_process';
+import { Config } from './lib/config.js';
+import { requireLogin, validateCredentials } from './lib/auth.js';
+
 
 // Define __dirname in ES Module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const config = new Config();
 
 // Initialize Commander
 const program = new Command();
@@ -65,11 +69,49 @@ program
     console.log(chalk.yellow('Version: 1.0.5'));
   });
 
+
+  // Login command
+program
+.command('login')
+.description('Login to EnvCLI')
+.argument('<username>', 'Username for login')
+.argument('<key>', 'Login key')
+.action((username, key) => {
+  if (validateCredentials(username, key)) {
+    config.login(username);
+    console.log(chalk.green('✨ Successfully logged in!'));
+  } else {
+    console.log(chalk.red('❌ Invalid credentials'));
+    process.exit(1);
+  }
+});
+
+// Logout command
+program
+.command('logout')
+.description('Logout from EnvCLI')
+.action(requireLogin(() => {
+  config.logout();
+  console.log(chalk.green('👋 Successfully logged out!'));
+}));
+
+// Status command
+program
+.command('status')
+.description('Check login status')
+.action(() => {
+  if (config.isLoggedIn()) {
+    console.log(chalk.green(`✨ Logged in as: ${config.getUsername()}`));
+  } else {
+    console.log(chalk.yellow('❌ Not logged in'));
+  }
+});
+
 // Command to list environment variables
 program
   .command('list')
   .description('List all environment variables')
-  .action(() => {
+  .action(requireLogin(() => {
     const envFile = path.join(__dirname, '.env.json');
     if (fs.existsSync(envFile)) {
       const envData = JSON.parse(fs.readFileSync(envFile, 'utf-8'));
@@ -78,7 +120,7 @@ program
     } else {
       console.log(chalk.red('No .env.json file found!'));
     }
-  });
+  }));
 
 // Command to set or update environment variables with type
 program
@@ -86,7 +128,7 @@ program
   .description(
     'Set or update an environment variable. Optionally specify the type (boolean, number, array, string). Default is string.'
   )
-  .action((key, value, type = 'string') => {
+  .action(requireLogin((key, value, type = 'string') => {
     const envFile = path.join(__dirname, '.env.json');
     let envData = {};
 
@@ -101,14 +143,14 @@ program
     console.log(
       chalk.green(`Set ${key}=${JSON.stringify(parsedValue)} (type: ${type || 'string'})`)
     );
-  });
+  }));
 
 
 // Command to delete an environment variable
 program
   .command('delete <key>')
   .description('Delete an environment variable')
-  .action((key) => {
+  .action(requireLogin((key) => {
     const envFile = path.join(__dirname, '.env.json');
     if (fs.existsSync(envFile)) {
       let envData = JSON.parse(fs.readFileSync(envFile, 'utf-8'));
@@ -122,7 +164,7 @@ program
     } else {
       console.log(chalk.red('No .env.json file found!'));
     }
-  });
+  }));
 
 // Command to check for updates
 program
