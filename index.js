@@ -10,6 +10,7 @@ import { execSync } from 'child_process';
 import { Config } from './lib/config.js';
 import { requireLogin, validateCredentials } from './lib/auth.js';
 import inquirer from 'inquirer';
+import { ApiService } from './lib/api-service.js';
 
 
 // Define __dirname in ES Module
@@ -67,7 +68,7 @@ program
     );
     console.log(chalk.green('A CLI tool for managing environment variables.'));
     // center align the version
-    console.log(chalk.yellow('Version: 1.0.5'));
+    console.log(chalk.yellow('Version: 1.0.7'));
   });
 
 
@@ -103,12 +104,30 @@ program
       }
     ]);
 
-    if (validateCredentials(answers.username, answers.key)) {
-      config.login(answers.username);
-      console.log(chalk.green('✨ Successfully logged in!'));
-    } else {
-      console.log(chalk.red('❌ Invalid credentials'));
-      process.exit(1);
+    console.log(chalk.yellow('Verifying credentials...'));
+
+    try {
+      const result = await ApiService.verifyLogin(answers.username, answers.key);
+      
+      // For demo purposes, still check local credentials if API is not available
+      if (result.success) {
+        config.login(answers.username);
+        if (result.token) {
+          config.saveToken(result.token); // Add this method to your Config class
+        }
+        console.log(chalk.green('✨ Successfully logged in!'));
+      }
+    } catch (apiError) {
+      console.log(chalk.yellow('⚠️  API verification failed, falling back to local verification...'));
+      
+      // Fallback to local verification
+      if (validateCredentials(answers.username, answers.key)) {
+        config.login(answers.username);
+        console.log(chalk.green('✨ Successfully logged in (local verification)!'));
+      } else {
+        console.log(chalk.red('❌ Invalid credentials'));
+        process.exit(1);
+      }
     }
   } catch (error) {
     console.error(chalk.red('Error during login:'), error.message);

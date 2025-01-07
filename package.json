@@ -1,6 +1,6 @@
 {
   "name": "envcli",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "",
   "main": "index.js",
   "type": "module",
@@ -17,6 +17,7 @@
     "chalk": "^4.1.2",
     "commander": "^12.1.0",
     "figlet": "^1.8.0",
-    "inquirer": "^9.2.12"
+    "inquirer": "^9.2.12",
+    "node-fetch": "^3.3.2"
   }
 }
