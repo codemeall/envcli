@@ -66,9 +66,9 @@ program
         figlet.textSync('EnvCLI', { horizontalLayout: 'full' })
       )
     );
-    console.log(chalk.green('A CLI tool for managing environment variables.'));
+    console.log(chalk.green('A CLI tool for managing environment variables - by Abdul Aziz'));
     // center align the version
-    console.log(chalk.yellow('Version: 1.0.7'));
+    console.log(chalk.yellow('Version: 1.0.9'));
   });
 
 
@@ -226,18 +226,24 @@ program
       // Run brew update
       execSync('brew update', { stdio: 'inherit' });
       
-      // Check if update is available
-      const outdated = execSync('brew outdated envcli').toString();
-      
-      if (outdated.includes('envcli')) {
+      // Check if update is available and upgrade in one command
+      try {
+        const outdated = execSync('brew outdated envcli').toString();
+        if (outdated.includes('envcli')) {
+          console.log(chalk.yellow('Update available! Installing...'));
+          execSync('brew upgrade envcli', { stdio: 'inherit' });
+          console.log(chalk.green('✨ Successfully updated envcli!'));
+        } else {
+          console.log(chalk.green('✨ You are already using the latest version!'));
+        }
+      } catch (outdatedError) {
+        // If brew outdated returns non-zero exit code (meaning updates available), upgrade anyway
         console.log(chalk.yellow('Update available! Installing...'));
         execSync('brew upgrade envcli', { stdio: 'inherit' });
         console.log(chalk.green('✨ Successfully updated envcli!'));
-      } else {
-        console.log(chalk.green('✨ You are already using the latest version!'));
       }
     } catch (error) {
-      console.error(chalk.red('Error checking for updates:'), error.message);
+      console.error(chalk.red('Error during update:'), error.message);
       process.exit(1);
     }
   });
