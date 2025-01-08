@@ -68,7 +68,7 @@ program
     );
     console.log(chalk.green('A CLI tool for managing environment variables.'));
     // center align the version
-    console.log(chalk.yellow('Version: 1.1.0'));
+    console.log(chalk.yellow('Version: 1.0.1'));
   });
 
 
@@ -185,7 +185,15 @@ program
     if (fs.existsSync(envFile)) {
       const envData = JSON.parse(fs.readFileSync(envFile, 'utf-8'));
       console.log(chalk.yellow('Environment Variables:'));
-      console.table(envData);
+      
+      // Transform data into table format with key, value and type
+      const tableData = Object.entries(envData).map(([key, value]) => ({
+        Key: key,
+        Value: JSON.stringify(value),
+        Type: Array.isArray(value) ? 'array' : typeof value
+      }));
+      
+      console.table(tableData);
     } else {
       console.log(chalk.red('No .env.json file found!'));
     }
@@ -195,7 +203,7 @@ program
 program
   .command('set <key> <value> [type]')
   .description(
-    'Set or update an environment variable. Optionally specify the type (boolean, number, array, string). Default is string.'
+    'Set or update an environment variable. Optionally specify the type (boolean, number, array, string, object). Default is string.'
   )
   .action(requireLogin((key, value, type = 'string') => {
     const envFile = path.join(__dirname, '.env.json');
@@ -205,13 +213,55 @@ program
       envData = JSON.parse(fs.readFileSync(envFile, 'utf-8'));
     }
 
-    const parsedValue = parseValue(value, type || 'string');
-    envData[key] = parsedValue;
+    let parsedValue;
+    try {
+      switch (type.toLowerCase()) {
+        case 'boolean':
+          parsedValue = value.toLowerCase() === 'true';
+          break;
+        case 'number':
+          parsedValue = Number(value);
+          if (isNaN(parsedValue)) {
+            throw new Error('Invalid number format');
+          }
+          break;
+        case 'array':
+          try {
+            // First try to parse as JSON array
+            parsedValue = JSON.parse(value);
+            if (!Array.isArray(parsedValue)) {
+              // If not array, try comma-separated format
+              parsedValue = value.split(',').map(item => item.trim());
+            }
+          } catch {
+            // If JSON parse fails, use comma-separated format
+            parsedValue = value.split(',').map(item => item.trim());
+          }
+          break;
+        case 'object':
+          try {
+            parsedValue = JSON.parse(value);
+            if (typeof parsedValue !== 'object' || Array.isArray(parsedValue)) {
+              throw new Error('Invalid object format');
+            }
+          } catch {
+            throw new Error('Invalid JSON object format');
+          }
+          break;
+        case 'string':
+        default:
+          parsedValue = value;
+      }
 
-    fs.writeFileSync(envFile, JSON.stringify(envData, null, 2));
-    console.log(
-      chalk.green(`Set ${key}=${JSON.stringify(parsedValue)} (type: ${type || 'string'})`)
-    );
+      envData[key] = parsedValue;
+      fs.writeFileSync(envFile, JSON.stringify(envData, null, 2));
+      console.log(
+        chalk.green(`Set ${key}=${JSON.stringify(parsedValue)} (type: ${type || 'string'})`)
+      );
+    } catch (error) {
+      console.log(chalk.red(`Error setting value: ${error.message}`));
+      process.exit(1);
+    }
   }));
 
 
