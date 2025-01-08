@@ -3,3 +3,5 @@ node_modules/
 
 # Python
 __pycache__
+dist/
+*.tgz

@@ -66,9 +66,9 @@ program
         figlet.textSync('EnvCLI', { horizontalLayout: 'full' })
       )
     );
-    console.log(chalk.green('A CLI tool for managing environment variables - by Abdul Aziz'));
+    console.log(chalk.green('A CLI tool for managing environment variables.'));
     // center align the version
-    console.log(chalk.yellow('Version: 1.0.9'));
+    console.log(chalk.yellow('Version: 1.1.0'));
   });
 
 
@@ -134,6 +134,26 @@ program
     process.exit(1);
   }
 });
+
+program
+.command('user')
+.description('Get user info')
+.action(requireLogin(async () => {
+  try {
+    const answers = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'id',
+        message: 'Enter your user ID:',
+      }
+    ]);
+    const userInfo = await ApiService.getUserInfo(answers.id);
+    console.log(chalk.yellow('User Info:'), userInfo);
+  } catch (error) {
+    console.error(chalk.red('Error fetching user info:'), error.message);
+    process.exit(1);
+  }
+}));
 
 // Logout command
 program
@@ -248,5 +268,20 @@ program
     }
   });
 
+// Add explicit exit handling
+program
+  .exitOverride((err) => {
+    if (err.code === 'commander.help' || err.code === 'commander.helpDisplayed') {
+      process.exit(0);
+    }
+    process.exit(1);
+  });
+
 // Parse arguments
 program.parse(process.argv);
+
+// If no commands were passed, show help
+if (!process.argv.slice(2).length) {
+  program.outputHelp();
+  process.exit(0);
+}
